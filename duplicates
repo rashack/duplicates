@@ -1,0 +1,67 @@
+#!/usr/bin/guile \
+-e main -s
+!#
+
+(use-modules (ice-9 ftw))
+
+(define (println args)
+  (cond ((string? args)
+         (display args))
+        ((and (pair? args) (string? (car args)))
+         (apply format (cons #t args)))
+        (#t (format #t "~a" args)))
+  (newline))
+
+(define (list-files-fold file-name)
+  "Return a list of regular files and their sizes."
+  (define (enter? name stat result)
+    ;; Skip version control directories.
+    (not (member (basename name) '(".git" ".svn" "CVS"))))
+  (define (leaf name stat result)
+    (cons (cons name (stat:size stat)) result))
+  ;; Ignore directory traversal.
+  (define (down name stat result) result)
+  (define (up name stat result) result)
+  ;; Ignore skipped directories.
+  (define (skip name stat result) result)
+  ;; Ignore unreadable files/directories but warn the user.
+  (define (error name stat errno result)
+    (format (current-error-port) "warning: ~a: ~a~%"
+            name (strerror errno))
+    result)
+
+  (file-system-fold enter? leaf down up skip error
+                    '()  ; start value
+                    file-name))
+
+(define (hash-files files)
+  (let ((ht (make-hash-table 100000))) ;; 100000 files is probably enough
+    (for-each (lambda (fc) (hash-set! ht (key fc) fc))
+              files)
+    ht))
+
+(define (name file)
+  (car file))
+(define (bname file)
+  (basename (name file)))
+(define (key file)
+  (bname file))
+(define (size file)
+  (cdr file))
+
+(define (is-duplicate? file1 file2)
+  (and (string=? (bname file1) (bname file2))
+       (= (size file1) (size file2))))
+
+(define (print-duplicates files dupes ht)
+  (for-each (lambda (dupe)
+              (when (is-duplicate? (hash-ref ht (key dupe)) dupe)
+                    (println (name dupe))))
+              dupes))
+
+(define (main args)
+  (let* ((files (list-files-fold (cadr args)))
+         (dupes (list-files-fold (caddr args)))
+         (ht (hash-files files)))
+    (print-duplicates files dupes ht))
+  )
