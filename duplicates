@@ -50,7 +50,9 @@
   (cdr file))
 
 (define (is-duplicate? file1 file2)
-  (and (string=? (bname file1) (bname file2))
+  (and (pair? file1)
+       (pair? file2)
+       (string=? (bname file1) (bname file2))
        (= (size file1) (size file2))))
 
 (define (print-duplicates files dupes ht)
