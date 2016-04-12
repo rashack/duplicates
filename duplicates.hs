@@ -54,5 +54,5 @@ printEntry k hm =
 
 exists f hm =
   case M.lookup (takeFileName f) hm of
-    Just (Entry f s) -> putStrLn f
+    Just (Entry _f _s) -> putStrLn f
     Nothing -> return ()
